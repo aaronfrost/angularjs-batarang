@@ -1,5 +1,4 @@
-
-panelApp.controller('ModelCtrl', function ModelCtrl($scope, appContext, appModel, poll) {
+panelApp.controller('ModelCtrl', function ModelCtrl($scope, appContext, appModel, appInspect, poll) {
 
   $scope.inspect = function () {
     appContext.inspect(this.val.id);
@@ -37,4 +36,5 @@ panelApp.controller('ModelCtrl', function ModelCtrl($scope, appContext, appModel
     });
   });
 
+  appInspect.enable();
 });
