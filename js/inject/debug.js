@@ -123,6 +123,20 @@ var inject = function () {
         return scopeLocals;
       };
 
+      // if isolate scope, return binding info
+      var getScopeBindings = function (scope) {
+        for (var prop in scope.$$isolateBindings) {
+          if (scope.$$isolateBindings.hasOwnProperty(prop)) {
+            return scope.$$isolateBindings;
+          }
+        }
+      };
+
+      // if isolate scope, return binding info
+      var getScopeTranscluded = function (scope) {
+        return scope.$$transcluded;
+      };
+
       // helper to extract dependencies from function arguments
       // not all versions of AngularJS expose annotate
       var annotate = angular.injector().annotate;
@@ -207,6 +221,8 @@ var inject = function () {
             var tree = {
               id: sc.$id,
               locals: debug.scopes[sc.$id],
+              transcluded: getScopeTranscluded(sc),
+              isolateBindings: getScopeBindings(sc),
               children: []
             };
 

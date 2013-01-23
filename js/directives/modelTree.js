@@ -16,10 +16,14 @@ panelApp.directive('batModelTree', function ($compile) {
       // this is more complicated then it should be
       // see: https://github.com/angular/angular.js/issues/898
       element.append(
-        '<div class="scope-branch">' +
-          '<a href ng-click="inspect()">Scope ({{val.id}})</a>' +
+        '<div class="scope-branch" ng-class="{isolate: val.isolateBindings, transcluded: val.transcluded}">' +
+          '<a href ng-click="inspect()"><span ng-show="val.transcluded">Transcluded </span>' +
+            '<span ng-show="val.isolateBindings">Isolate </span>Scope ({{val.id}})</a>' +
+          
           '<span ng-show="val.children.length"> | <a href ng-click="scopeState[val.id] = !scopeState[val.id]">scopes</a></span>' +
           '<span ng-show="val.locals"> | <a href ng-click="modelState[val.id] = !modelState[val.id]">models</a></span>' +
+
+          '<div ng-show="val.isolateBindings">{{val.isolateBindings | json}}</div>' +
 
           '<div ng-show="modelState[val.id]">' +
             '<bat-json-tree val="val.locals" ></bat-json-tree>' +
