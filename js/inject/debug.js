@@ -181,6 +181,40 @@ var inject = function () {
         }());
       }
 
+      // throttle based on _.throttle from Lo-Dash
+      // https://github.com/bestiejs/lodash/blob/master/lodash.js#L4625
+      var throttle = function (func, wait) {
+        var args,
+            result,
+            thisArg,
+            timeoutId,
+            lastCalled = 0;
+
+        function trailingCall() {
+          lastCalled = new Date();
+          timeoutId = null;
+          result = func.apply(thisArg, args);
+        }
+        return function() {
+          var now = new Date(),
+            remaining = wait - (now - lastCalled);
+
+          args = arguments;
+          thisArg = this;
+
+          if (remaining <= 0) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+            lastCalled = now;
+            result = func.apply(thisArg, args);
+          }
+          else if (!timeoutId) {
+            timeoutId = setTimeout(trailingCall, remaining);
+          }
+          return result;
+        };
+      };
+
 
       // Public API
       // ==========
@@ -398,7 +432,7 @@ var inject = function () {
           $delegate.__proto__.$watch = function (watchExpression, applyFunction) {
             var thatScope = this;
             var watchStr = watchFnToHumanReadableString(watchExpression);
-            
+
             if (!debug.watchPerf[watchStr]) {
               debug.watchPerf[watchStr] = {
                 time: 0,
@@ -521,7 +555,7 @@ var inject = function () {
     // Return a script element with the above code embedded in it
     var script = window.document.createElement('script');
     script.innerHTML = '(' + fn.toString() + '(window))';
-    
+
     return script;
   }()));
 };

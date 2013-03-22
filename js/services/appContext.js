@@ -1,5 +1,5 @@
 // Service for running code in the context of the application being debugged
-panelApp.factory('appContext', function (chromeExtension) {
+angular.module('panelApp').factory('appContext', function (chromeExtension) {
 
   // Public API
   // ==========

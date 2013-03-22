@@ -1,5 +1,4 @@
-
-panelApp.controller('ModelCtrl', function ModelCtrl($scope, appContext, appModel, poll) {
+angular.module('panelApp').controller('ModelCtrl', function ModelCtrl($scope, appContext, appModel) {
 
   $scope.inspect = function () {
     appContext.inspect(this.val.id);

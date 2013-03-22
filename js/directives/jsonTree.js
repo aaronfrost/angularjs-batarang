@@ -1,4 +1,4 @@
-panelApp.directive('batJsonTree', function($compile) {
+angular.module('panelApp').directive('batJsonTree', function($compile) {
   return {
     restrict: 'E',
     terminal: true,
