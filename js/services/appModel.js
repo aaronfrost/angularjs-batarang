@@ -55,6 +55,12 @@ angular.module('panelApp').factory('appModel', function (chromeExtension, appCon
         }
         callback(_scopeTreeCache[id]);
       });
+    },
+
+    enableInspector: function (argument) {
+      chromeExtension.eval(function (window, args) {
+        return window.__ngDebug.enable();
+      });
     }
   };
 });

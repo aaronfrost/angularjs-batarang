@@ -250,6 +250,7 @@ var inject = function () {
         debug.scopeDirty[scope.$id] = false;
       };
 
+      var popover = null;
 
       // Public API
       // ==========
@@ -346,26 +347,27 @@ var inject = function () {
         },
 
         enable: function () {
+          if (popover) {
+            return;
+          }
           var angular = window.angular;
-          var popover = angular.element(
-            '<div style="position: fixed; left: 50px; top: 50px; z-index: 9999; background-color: white; padding: 10px;"> ' +
-              '<div style="position: relative" style="min-width: 300px; min-height: 100px;"">' +
-                '<div class="content" style="border: 1px solid blue; min-width: 100px; min-height: 50px;"></div>' +
-                '<div class="drag" style="width: 50px; height: 50px; position: absolute; left: -25px; top: -25px; background-color: red;"></div>' +
-                '<div class="drag" style="width: 50px; height: 50px; position: absolute; right: -25px; bottom: -25px; background-color: green;"></div>' +
+          popover = angular.element(
+            '<div style="position: fixed; left: 50px; top: 50px; z-index: 9999; background-color: #f1f1f1; box-shadow: 0 15px 10px -10px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;">' +
+              '<div style="position: relative" style="min-width: 300px; min-height: 100px;">' +
+                '<div style="min-width: 100px; min-height: 50px; padding: 5px;"><pre>{ Please select a scope }</pre></div>' +
+                '<button style="position: absolute; top: -15px; left: -15px; cursor: move;">⇱</button>' +
+                '<button style="position: absolute; top: -15px; left: 10px;">+</button>' +
+                '<button style="position: absolute; top: -15px; right: -15px;">x</button>' +
               '</div>' +
             '</div>');
           angular.element(window.document.body).append(popover);
           var popoverContent = angular.element(angular.element(popover.children('div')[0]).children('div')[0]);
           var dragElt = angular.element(angular.element(popover.children('div')[0]).children('div')[1]);
           var selectElt = angular.element(angular.element(popover.children('div')[0]).children('div')[2]);
-
-          console.log(dragElt);
+          var closeElt = angular.element(angular.element(popover.children('div')[0]).children('div')[3]);
 
           var currentScope = null,
             currentElt = null;
-
-          //console.log(popover);
 
           function onMove (ev) {
             var x = ev.clientX,
@@ -382,12 +384,17 @@ var inject = function () {
               y = 0;
             }
 
-            x += 10;
-            y += 10;
+            x += 5;
+            y += 5;
 
             popover.css('left', x + 'px');
             popover.css('top', y + 'px');
           }
+
+          closeElt.bind('click', function () {
+            popover.remove();
+            popover = null;
+          });
 
           selectElt.bind('click', bindSelectScope);
 
@@ -398,6 +405,8 @@ var inject = function () {
             }
             setTimeout(function () {
               selecting = true;
+              selectElt.attr('disabled', true);
+              angular.element(document.body).css('cursor', 'crosshair');
               angular.element(document.getElementsByClassName('ng-scope'))
                 .bind('click', onSelectScope)
                 .bind('mouseover', onHoverScope);
@@ -415,6 +424,8 @@ var inject = function () {
               hoverScopeElt.css('border', '');
             }
             selecting = false;
+            selectElt.attr('disabled', false);
+            angular.element(document.body).css('cursor', '');
             hovering = false;
           }
 
@@ -432,7 +443,7 @@ var inject = function () {
               hoverScopeElt = angular.element(that).css('border', '2px solid red');
               hovering = false;
               render(that);
-            }, 100)
+            }, 100);
           }
 
           function onUnhoverScope (ev) {
@@ -448,7 +459,7 @@ var inject = function () {
             angular.element(document).unbind('mousemove', onMove);
             setTimeout(function () {
               rendering = false;
-            }, 120)
+            }, 120);
           });
 
           var rendering = false;
