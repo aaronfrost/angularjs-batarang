@@ -76,6 +76,9 @@ var inject = function () {
               nu;         // The new object or array
           switch (typeof value) {
           case 'object':
+            if (value instanceof HTMLElement) {
+              return value.innerHTML;
+            }
             if (!value) {
               return null;
             }
@@ -215,6 +218,11 @@ var inject = function () {
         };
       };
 
+      var updateScopeModelCache = function (scope) {
+        debug.models[scope.$id] = getScopeLocals(scope);
+        debug.scopeDirty[scope.$id] = false;
+      };
+
 
       // Public API
       // ==========
@@ -233,14 +241,21 @@ var inject = function () {
           return ids;
         },
 
+        // returns null or cached scope
+        getModel: function (id) {
+          if (debug.scopeDirty[id]) {
+            updateScopeModelCache(debug.scopes[id]);
+            return debug.models[id];
+          }
+        },
+
         getScopeTree: function (id) {
-          if (debug.rootScopeDirty[id] === false) {
+          if (debug.scopeTreeDirty[id] === false) {
             return;
           }
           var traverse = function (sc) {
             var tree = {
               id: sc.$id,
-              locals: debug.scopes[sc.$id],
               children: []
             };
 
@@ -258,8 +273,9 @@ var inject = function () {
           var tree = traverse(root);
 
           if (tree) {
-            debug.rootScopeDirty[id] = false;
+            debug.scopeTreeDirty[id] = false;
           }
+
 
           return tree;
         },
@@ -316,14 +332,16 @@ var inject = function () {
         watchPerf: {},
         applyPerf: {},
 
-        // map of scope.$ids --> model objects
+        // map of scope.$ids --> $scope objects
         scopes: {},
-
-        // map of $ids --> refs to root scopes
-        rootScopes: {},
-
+        // map of scope.$ids --> model objects
+        models: {},
         // map of $ids --> bools
-        rootScopeDirty: {},
+        scopeDirty: {},
+
+        // map of $ids --> refs to $rootScope objects
+        rootScopes: {},
+        scopeTreeDirty: {},
 
         deps: []
       };
@@ -397,7 +415,7 @@ var inject = function () {
         });
 
         $provide.decorator('$rootScope', function ($delegate) {
-          
+
           var watchFnToHumanReadableString = function (fn) {
             if (fn.exp) {
               return fn.exp.trim();
@@ -476,8 +494,8 @@ var inject = function () {
                 var start = performance.now();
                 var ret = unpatchedApplyFunction.apply(this, arguments);
                 var end = performance.now();
+                debug.scopeDirty[this.$id] = true;
 
-                debug.scopes[thatScope.$id] = getScopeLocals(thatScope);
                 //TODO: move these checks out of here and into registering the watcher
                 if (!debug.applyPerf[applyStr]) {
                   debug.applyPerf[applyStr] = {
@@ -487,7 +505,6 @@ var inject = function () {
                 }
                 debug.applyPerf[applyStr].time += (end - start);
                 debug.applyPerf[applyStr].calls += 1;
-                debug.rootScopeDirty[thatScope.$root.$id] = true;
                 return ret;
               };
             }
@@ -503,11 +520,15 @@ var inject = function () {
             if (debug.watchers[this.$id]) {
               delete debug.watchers[this.$id];
             }
+            if (debug.models[this.$id]) {
+              delete debug.models[this.$id];
+            }
             if (debug.scopes[this.$id]) {
               delete debug.scopes[this.$id];
             }
             return _destroy.apply(this, arguments);
           };
+
 
           // patch $new
           // ----------
@@ -517,6 +538,7 @@ var inject = function () {
             var ret = _new.apply(this, arguments);
             if (ret.$root) {
               debug.rootScopes[ret.$root.$id] = ret.$root;
+              debug.scopeTreeDirty[ret.$root.$id] = true;
             }
 
             // create empty watchers array for this scope
@@ -524,10 +546,22 @@ var inject = function () {
               debug.watchers[ret.$id] = [];
             }
 
-            debug.rootScopeDirty[ret.$root.$id] = true;
+            debug.scopes[ret.$id] = ret;
+            debug.scopeDirty[ret.$id] = true;
 
             return ret;
           };
+
+
+          // patch $digest
+          // -------------
+          var _digest = $delegate.__proto__.$digest;
+          $delegate.__proto__.$digest = function (fn) {
+            var ret = _digest.apply(this, arguments);
+            debug.scopeDirty[this.$id] = true;
+            return ret;
+          };
+
 
           // patch $apply
           // ------------
@@ -536,6 +570,7 @@ var inject = function () {
             var start = performance.now();
             var ret = _apply.apply(this, arguments);
             var end = performance.now();
+            debug.scopeDirty[this.$id] = true;
 
             // If the debugging option is enabled, log to console
             // --------------------------------------------------
