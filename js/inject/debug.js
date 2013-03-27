@@ -358,6 +358,10 @@ var inject = function () {
                 '<button style="position: absolute; top: -15px; left: -15px; cursor: move;">⇱</button>' +
                 '<button style="position: absolute; top: -15px; left: 10px;">+</button>' +
                 '<button style="position: absolute; top: -15px; right: -15px;">x</button>' +
+                '<style>' +
+                  '.ng-scope.batarang-selected { border: 1px solid red; } ' +
+                  '.bat-indent { margin-left: 20px; }' +
+                '</style>' +
               '</div>' +
             '</div>');
           angular.element(window.document.body).append(popover);
@@ -415,14 +419,23 @@ var inject = function () {
 
           var hoverScopeElt = null;
 
+          function markHoverElt () {
+            if (hoverScopeElt) {
+              hoverScopeElt.addClass('batarang-selected');
+            }
+          }
+          function unmarkHoverElt () {
+            if (hoverScopeElt) {
+              hoverScopeElt.removeClass('batarang-selected');
+            }
+          }
+
           function onSelectScope (ev) {
             render(this);
             angular.element(document.getElementsByClassName('ng-scope'))
               .unbind('click', onSelectScope)
               .unbind('mouseover', onHoverScope);
-            if (hoverScopeElt) {
-              hoverScopeElt.css('border', '');
-            }
+            unmarkHoverElt();
             selecting = false;
             selectElt.attr('disabled', false);
             angular.element(document.body).css('cursor', '');
@@ -437,10 +450,9 @@ var inject = function () {
             hovering = true;
             var that = this;
             setTimeout(function () {
-              if (hoverScopeElt) {
-                hoverScopeElt.css('border', '');
-              }
-              hoverScopeElt = angular.element(that).css('border', '2px solid red');
+              unmarkHoverElt();
+              hoverScopeElt = angular.element(that);
+              markHoverElt();
               hovering = false;
               render(that);
             }, 100);
@@ -462,6 +474,41 @@ var inject = function () {
             }, 120);
           });
 
+          function renderTree (data) {
+            var tree = angular.element('<div class="bat-indent"></div>');
+            angular.forEach(data, function (val, key) {
+              var toAppend;
+              if (val === undefined) {
+                toAppend = '<i>undefined</i>';
+              } else if (val === null) {
+                toAppend = '<i>null</i>';
+              } else if (val instanceof Array) {
+                toAppend = '[ ... ]';
+              } else if (val instanceof Object) {
+                toAppend = '{ ... }';
+              } else {
+                toAppend = val.toString();
+              }
+              toAppend = '<div>' + key + ': ' + toAppend + '</div>';
+              toAppend = angular.element(toAppend);
+              if (val instanceof Array || val instanceof Object) {
+                function recur () {
+                  toAppend.unbind('click', recur);
+                  toAppend.children().remove();
+                  toAppend.html('');
+                  toAppend
+                    .append('<span>' + key + ': {<span>')
+                    .append(renderTree(val))
+                    .append('<span>}<span>');
+                }
+                toAppend.bind('click', recur);
+              }
+              tree.append(toAppend);
+            });
+
+            return tree;
+          }
+
           var rendering = false;
           var render = function (elt) {
             if (rendering) {
@@ -478,8 +525,8 @@ var inject = function () {
               currentElt = elt;
 
               var models = getScopeLocals(scope);
-              var str = JSON.stringify(models);
-              popoverContent.html('<h4>Scope (' + scope.$id + ')</h4><pre>' + str + '</pre>');
+              popoverContent.children().remove();
+              popoverContent.append(renderTree(models));
             }, 100);
           };
 
