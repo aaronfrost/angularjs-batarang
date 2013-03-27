@@ -218,6 +218,33 @@ var inject = function () {
         };
       };
 
+      var debounce = function (func, wait, immediate) {
+        var args,
+          result,
+          thisArg,
+          timeoutId;
+
+        function delayed() {
+          timeoutId = null;
+          if (!immediate) {
+            result = func.apply(thisArg, args);
+          }
+        }
+        return function() {
+          var isImmediate = immediate && !timeoutId;
+          args = arguments;
+          thisArg = this;
+
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(delayed, wait);
+
+          if (isImmediate) {
+            result = func.apply(thisArg, args);
+          }
+          return result;
+        };
+      };
+
       var updateScopeModelCache = function (scope) {
         debug.models[scope.$id] = getScopeLocals(scope);
         debug.scopeDirty[scope.$id] = false;
@@ -316,6 +343,39 @@ var inject = function () {
           var tree = traverse(root);
 
           return tree;
+        },
+
+        enable: function () {
+          var angular = window.angular;
+          var popover = angular.element('<div style="position: fixed; left: 10px; top: 10px; z-index: 9999; background-color: white; padding: 10px;"></div>');
+          angular.element(window.document.body).append(popover);
+
+          var pastScope = null,
+            delayScope = null;
+
+          var rendering = false;
+          var render = function (elt) {
+            var scope = angular.element(elt).scope();
+            console.log(scope.$id);
+            rendering = false;
+            if (scope === pastScope) {
+              return;
+            }
+            pastScope = scope;
+
+            var models = getScopeLocals(scope);
+            var str = JSON.stringify(models);
+            console.log(str);
+            //console.log(thisScope);
+            popover.html(str);
+          };
+
+          angular.element('.ng-scope').on('click', function (ev) {
+            rendering = true;
+            render(this);
+          });
+
+
         }
       };
 
