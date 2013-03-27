@@ -347,34 +347,130 @@ var inject = function () {
 
         enable: function () {
           var angular = window.angular;
-          var popover = angular.element('<div style="position: fixed; left: 10px; top: 10px; z-index: 9999; background-color: white; padding: 10px;"></div>');
+          var popover = angular.element(
+            '<div style="position: fixed; left: 50px; top: 50px; z-index: 9999; background-color: white; padding: 10px;"> ' +
+              '<div style="position: relative" style="min-width: 300px; min-height: 100px;"">' +
+                '<div class="content" style="border: 1px solid blue; min-width: 100px; min-height: 50px;"></div>' +
+                '<div class="drag" style="width: 50px; height: 50px; position: absolute; left: -25px; top: -25px; background-color: red;"></div>' +
+                '<div class="drag" style="width: 50px; height: 50px; position: absolute; right: -25px; bottom: -25px; background-color: green;"></div>' +
+              '</div>' +
+            '</div>');
           angular.element(window.document.body).append(popover);
+          var popoverContent = angular.element(angular.element(popover.children('div')[0]).children('div')[0]);
+          var dragElt = angular.element(angular.element(popover.children('div')[0]).children('div')[1]);
+          var selectElt = angular.element(angular.element(popover.children('div')[0]).children('div')[2]);
 
-          var pastScope = null,
-            delayScope = null;
+          console.log(dragElt);
+
+          var currentScope = null,
+            currentElt = null;
+
+          //console.log(popover);
+
+          function onMove (ev) {
+            var x = ev.clientX,
+              y = ev.clientY;
+
+            if (x > window.outerWidth - 100) {
+              x = window.outerWidth - 100;
+            } else if (x < 0) {
+              x = 0;
+            }
+            if (y > window.outerHeight - 100) {
+              y = window.outerHeight - 100;
+            } else if (y < 0) {
+              y = 0;
+            }
+
+            x += 10;
+            y += 10;
+
+            popover.css('left', x + 'px');
+            popover.css('top', y + 'px');
+          }
+
+          selectElt.bind('click', bindSelectScope);
+
+          var selecting = false;
+          function bindSelectScope () {
+            if (selecting) {
+              return;
+            }
+            setTimeout(function () {
+              selecting = true;
+              angular.element(document.getElementsByClassName('ng-scope'))
+                .bind('click', onSelectScope)
+                .bind('mouseover', onHoverScope);
+            }, 30);
+          }
+
+          var hoverScopeElt = null;
+
+          function onSelectScope (ev) {
+            render(this);
+            angular.element(document.getElementsByClassName('ng-scope'))
+              .unbind('click', onSelectScope)
+              .unbind('mouseover', onHoverScope);
+            if (hoverScopeElt) {
+              hoverScopeElt.css('border', '');
+            }
+            selecting = false;
+            hovering = false;
+          }
+
+          var hovering = false;
+          function onHoverScope (ev) {
+            if (hovering) {
+              return;
+            }
+            hovering = true;
+            var that = this;
+            setTimeout(function () {
+              if (hoverScopeElt) {
+                hoverScopeElt.css('border', '');
+              }
+              hoverScopeElt = angular.element(that).css('border', '2px solid red');
+              hovering = false;
+              render(that);
+            }, 100)
+          }
+
+          function onUnhoverScope (ev) {
+            angular.element(this).css('border', '');
+          }
+
+          dragElt.bind('mousedown', function (ev) {
+            ev.preventDefault();
+            rendering = true;
+            angular.element(document).bind('mousemove', onMove);
+          });
+          angular.element(document).bind('mouseup', function () {
+            angular.element(document).unbind('mousemove', onMove);
+            setTimeout(function () {
+              rendering = false;
+            }, 120)
+          });
 
           var rendering = false;
           var render = function (elt) {
-            var scope = angular.element(elt).scope();
-            console.log(scope.$id);
-            rendering = false;
-            if (scope === pastScope) {
+            if (rendering) {
               return;
             }
-            pastScope = scope;
-
-            var models = getScopeLocals(scope);
-            var str = JSON.stringify(models);
-            console.log(str);
-            //console.log(thisScope);
-            popover.html(str);
-          };
-
-          angular.element('.ng-scope').on('click', function (ev) {
             rendering = true;
-            render(this);
-          });
+            setTimeout(function () {
+              var scope = angular.element(elt).scope();
+              rendering = false;
+              if (scope === currentScope) {
+                return;
+              }
+              currentScope = scope;
+              currentElt = elt;
 
+              var models = getScopeLocals(scope);
+              var str = JSON.stringify(models);
+              popoverContent.html('<h4>Scope (' + scope.$id + ')</h4><pre>' + str + '</pre>');
+            }, 100);
+          };
 
         }
       };
